@@ -300,7 +300,6 @@
 
     <canvas id="bgCanvas"></canvas>
 
-    <!-- МЕНЮ -->
     <div id="menu-screen" class="screen active">
         <canvas id="heartCanvas" width="800" height="500" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;"></canvas>
         <h1 class="menu-title" data-text="LOVE_PROTOCOL">LOVE_PROTOCOL</h1>
@@ -311,7 +310,6 @@
         </div>
     </div>
 
-    <!-- ИГРА -->
     <div id="game-screen" class="screen">
         <button class="back-btn" onclick="switchScreen('menu-screen')">[X] EXIT</button>
         <div class="game-ui">
@@ -328,19 +326,16 @@
         </div>
     </div>
 
-    <!-- СООБЩЕНИЕ -->
     <div id="message-screen" class="screen">
         <button class="back-btn" onclick="switchScreen('menu-screen')">[X] EXIT</button>
         <div class="message-window">
             <h1 class="message-title">✨ Моей самой любимой ✨</h1>
             <div id="message-body" class="message-body">
-                <!-- Текст будет появляться здесь -->
             </div>
         </div>
     </div>
 
     <script>
-        /* ================= КОНФИГУРАЦИЯ ================= */
         const colors = {
             bg: '#0a0212',
             pink: '#ff2a6d',
@@ -349,7 +344,6 @@
             green: '#00ff99'
         };
 
-        /* ================= ФОНОВАЯ МАТРИЦА ================= */
         const bgCanvas = document.getElementById('bgCanvas');
         const bgCtx = bgCanvas.getContext('2d');
         
@@ -383,7 +377,6 @@
             }
         }
 
-        /* ================= МЕНЕДЖЕР ЭКРАНОВ ================= */
         let currentScreen = 'menu-screen';
         const screens = document.querySelectorAll('.screen');
         
@@ -397,7 +390,6 @@
             if (targetId === 'menu-screen') resetGame();
         }
 
-        /* ================= СЕРДЦЕ ИЗ ЛЕПЕСТКОВ ================= */
         const heartCanvas = document.getElementById('heartCanvas');
         const hCtx = heartCanvas.getContext('2d');
         
@@ -488,17 +480,15 @@
             });
         }
 
-        /* ================= ИГРА ДИНОЗАВРИК (СТИКЕРЫ) ================= */
         const gameCanvas = document.getElementById('gameCanvas');
         const gCtx = gameCanvas.getContext('2d');
         let dog, trees, gameLoop, score, isGameOver, speed;
         let spacePressed = false;
         
-        // НОВАЯ ЛОГИКА СПАВНА - СЧЁТЧИК РАССТОЯНИЯ
         let distanceSinceLastSpawn = 0;
-        const MIN_SPAWN_DISTANCE = 500; // Минимальный гарантированный интервал
-        const MAX_SPAWN_DISTANCE = 900; // Максимальный интервал (для разнообразия)
-        let nextSpawnDistance = MIN_SPAWN_DISTANCE; // Дистанция для следующего спавна
+        const MIN_SPAWN_DISTANCE = 500;
+        const MAX_SPAWN_DISTANCE = 900; 
+        let nextSpawnDistance = MIN_SPAWN_DISTANCE;
 
         class Dog {
             constructor() {
@@ -535,7 +525,6 @@
             draw() {
                 gCtx.save();
                 
-                // Тень
                 gCtx.fillStyle = 'rgba(5, 217, 232, 0.3)';
                 gCtx.beginPath();
                 gCtx.ellipse(this.x + 25, this.ground + 35, 30, 6, 0, 0, Math.PI * 2);
@@ -599,7 +588,7 @@
             speed = 5;
             isGameOver = false;
             distanceSinceLastSpawn = 0;
-            nextSpawnDistance = MIN_SPAWN_DISTANCE; // Первая сакура появится через 500px
+            nextSpawnDistance = MIN_SPAWN_DISTANCE;
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('speed-display').innerText = "SPEED: 5.0";
             
@@ -622,20 +611,11 @@
                 dog.update();
                 dog.draw();
 
-                // НОВАЯ ЛОГИКА СПАВНА
-                // Прибавляем пройденное расстояние (равно скорости)
                 distanceSinceLastSpawn += speed;
                 
-                // Если пройденное расстояние >= необходимого И случайный шанс срабатывает
                 if (distanceSinceLastSpawn >= nextSpawnDistance) {
-                    // Создаём сакуру
                     trees.push(new SakuraTree(gameCanvas.width));
-                    
-                    // Сбрасываем счётчик
                     distanceSinceLastSpawn = 0;
-                    
-                    // Генерируем новую дистанцию для следующего спавна (от 500 до 900 пикселей)
-                    // Это гарантирует минимум 500px между препятствиями
                     nextSpawnDistance = MIN_SPAWN_DISTANCE + Math.random() * (MAX_SPAWN_DISTANCE - MIN_SPAWN_DISTANCE);
                 }
 
@@ -644,8 +624,6 @@
                     t.speed = speed;
                     t.update();
                     t.draw();
-
-                    // Коллизия
                     if (dog.x + 35 > t.x + 5 && dog.x + 15 < t.x + 35 && 
                         dog.y > t.y - 30) {
                         gameOver();
@@ -661,7 +639,6 @@
                 score += 0.1;
                 document.getElementById('score').innerText = "SCORE: " + Math.floor(score);
                 
-                // Ускорение каждые 50 очков (с 5 до 12)
                 const newSpeed = 5 + Math.floor(score / 50) * 0.5;
                 if (newSpeed !== speed && newSpeed <= 12) {
                     speed = newSpeed;
@@ -704,7 +681,6 @@
             if (currentScreen === 'game-screen') dog.jump();
         });
 
-        /* ================= МИЛОЕ СООБЩЕНИЕ ================= */
         const messages = [
             "Привет, моя самая дорогая... 💕",
             "Каждый день с тобой — это маленькое чудо",
@@ -753,7 +729,6 @@
             messageTimeout = setTimeout(showMessageLine, 1500);
         }
 
-        /* ================= ГЛАВНЫЙ ЦИКЛ АНИМАЦИИ ================= */
         function mainLoop() {
             drawMatrix();
             if (currentScreen === 'menu-screen') {
