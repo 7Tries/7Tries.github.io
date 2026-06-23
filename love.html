@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM.EXE // LOVE_PROTOCOL</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Fira+Code:wght@400;700&family=Shippori+Mincho:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #0a0212;
+            --neon-pink: #ff2a6d;
+            --neon-blue: #05d9e8;
+            --neon-purple: #d300c5;
+            --code-green: #00ff99;
+            --text-light: #f0f0f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            font-family: 'Fira Code', monospace;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            z-index: 1000;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        #bgCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: transparent;
+            border: 1px solid var(--neon-pink);
+            color: var(--neon-pink);
+            padding: 5px 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 1.2rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .back-btn:hover {
+            background: var(--neon-pink);
+            color: var(--bg-color);
+            box-shadow: 0 0 15px var(--neon-pink);
+        }
+
+        #menu-screen {
+            z-index: 20;
+        }
+
+        .menu-title {
+            font-family: 'VT323', monospace;
+            font-size: 5rem;
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+            margin-bottom: 10px;
+            text-align: center;
+            position: relative;
+            animation: glitch 3s infinite;
+        }
+
+        .menu-subtitle {
+            font-family: 'Shippori Mincho', serif;
+            font-size: 1.5rem;
+            color: var(--neon-pink);
+            margin-bottom: 50px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px var(--neon-pink);
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 30;
+        }
+
+        .cyber-btn {
+            background: rgba(5, 217, 232, 0.1);
+            border: 2px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-family: 'Fira Code', monospace;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+        }
+
+        .cyber-btn:nth-child(2) {
+            border-color: var(--neon-pink);
+            color: var(--neon-pink);
+            background: rgba(255, 42, 109, 0.1);
+        }
+
+        .cyber-btn:hover {
+            background: var(--neon-blue);
+            color: var(--bg-color);
+            box-shadow: 0 0 30px var(--neon-blue);
+            transform: scale(1.05);
+        }
+
+        .cyber-btn:nth-child(2):hover {
+            background: var(--neon-pink);
+            box-shadow: 0 0 30px var(--neon-pink);
+        }
+
+        #gameCanvas {
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 20px var(--neon-blue);
+            background: rgba(0,0,0,0.5);
+            margin-top: 50px;
+        }
+
+        .game-ui {
+            width: 800px;
+            max-width: 90vw;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+            font-family: 'VT323', monospace;
+            color: var(--code-green);
+            text-shadow: 0 0 5px var(--code-green);
+        }
+
+        .hint {
+            margin-top: 15px;
+            font-size: 1rem;
+            color: var(--text-light);
+            opacity: 0.7;
+            animation: blink 1s infinite;
+        }
+
+        .message-window {
+            width: 800px;
+            max-width: 90vw;
+            min-height: 500px;
+            background: rgba(10, 2, 18, 0.95);
+            border: 2px solid var(--neon-purple);
+            box-shadow: 0 0 40px rgba(211, 0, 197, 0.4);
+            padding: 40px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .message-title {
+            font-family: 'Shippori Mincho', serif;
+            font-size: 2.5rem;
+            color: var(--neon-pink);
+            text-shadow: 0 0 10px var(--neon-pink);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .message-body {
+            font-family: 'Shippori Mincho', serif;
+            font-size: 1.4rem;
+            line-height: 2;
+            color: var(--text-light);
+            text-shadow: 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+
+        .message-line {
+            opacity: 0;
+            margin-bottom: 15px;
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        .heart-emoji {
+            display: inline-block;
+            animation: heartbeat 1.5s ease infinite;
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue); }
+            20% { text-shadow: 2px 0 var(--neon-pink), -2px 0 var(--neon-blue); transform: translate(-1px, 1px); }
+            40% { text-shadow: -2px 0 var(--neon-pink), 2px 0 var(--neon-blue); transform: translate(1px, -1px); }
+            60% { text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue); }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.27861; }
+            5% { opacity: 0.34769; }
+            10% { opacity: 0.23604; }
+            15% { opacity: 0.90626; }
+            20% { opacity: 0.18128; }
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            10%, 30% { transform: scale(1.2); }
+            20%, 40% { transform: scale(1); }
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid var(--neon-pink);
+            padding: 30px;
+            text-align: center;
+            display: none;
+            z-index: 50;
+        }
+
+        #game-over h2 {
+            color: var(--neon-pink);
+            font-family: 'VT323', monospace;
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
+
+        #restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: var(--neon-pink);
+            color: var(--bg-color);
+            border: none;
+            font-family: 'Fira Code', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        #restart-btn:hover {
+            background: var(--neon-blue);
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+
+        @media (max-width: 800px) {
+            .menu-title { font-size: 3rem; }
+            .cyber-btn { font-size: 1.2rem; padding: 10px 20px; }
+            #gameCanvas { width: 100%; height: 300px; }
+            .message-title { font-size: 2rem; }
+            .message-body { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- МЕНЮ -->
+    <div id="menu-screen" class="screen active">
+        <canvas id="heartCanvas" width="800" height="500" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;"></canvas>
+        <h1 class="menu-title" data-text="LOVE_PROTOCOL">LOVE_PROTOCOL</h1>
+        <p class="menu-subtitle">君のことが好きです (Я люблю тебя)</p>
+        <div class="menu-buttons">
+            <button class="cyber-btn" onclick="switchScreen('game-screen')">🎮 ЗАПУСТИТЬ_ИГРУ</button>
+            <button class="cyber-btn" onclick="switchScreen('message-screen')">💌 ПРОЧИТАТЬ_ПИСЬМО</button>
+        </div>
+    </div>
+
+    <!-- ИГРА -->
+    <div id="game-screen" class="screen">
+        <button class="back-btn" onclick="switchScreen('menu-screen')">[X] EXIT</button>
+        <div class="game-ui">
+            <div>USER: PLAYER_01</div>
+            <div id="score">SCORE: 0</div>
+            <div id="speed-display">SPEED: 5.0</div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="300"></canvas>
+        <div class="hint">[ SPACE ] или [ CLICK ] — ПРЫЖОК</div>
+        <div id="game-over">
+            <h2>GAME OVER</h2>
+            <p>Собачка устала бегать...</p>
+            <button id="restart-btn" onclick="restartGame()">ПОПРОБОВАТЬ СНОВА</button>
+        </div>
+    </div>
+
+    <!-- СООБЩЕНИЕ -->
+    <div id="message-screen" class="screen">
+        <button class="back-btn" onclick="switchScreen('menu-screen')">[X] EXIT</button>
+        <div class="message-window">
+            <h1 class="message-title">✨ Моей самой любимой ✨</h1>
+            <div id="message-body" class="message-body">
+                <!-- Текст будет появляться здесь -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= КОНФИГУРАЦИЯ ================= */
+        const colors = {
+            bg: '#0a0212',
+            pink: '#ff2a6d',
+            blue: '#05d9e8',
+            purple: '#d300c5',
+            green: '#00ff99'
+        };
+
+        /* ================= ФОНОВАЯ МАТРИЦА ================= */
+        const bgCanvas = document.getElementById('bgCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        
+        function resizeBg() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeBg);
+        resizeBg();
+
+        const matrixChars = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ0123456789<>/{}=+;愛恋心'.split('');
+        const fontSize = 16;
+        const columns = bgCanvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function drawMatrix() {
+            bgCtx.fillStyle = 'rgba(10, 2, 18, 0.05)';
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            bgCtx.fillStyle = colors.pink;
+            bgCtx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                bgCtx.fillStyle = Math.random() > 0.9 ? colors.blue : colors.pink;
+                bgCtx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > bgCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        /* ================= МЕНЕДЖЕР ЭКРАНОВ ================= */
+        let currentScreen = 'menu-screen';
+        const screens = document.querySelectorAll('.screen');
+        
+        function switchScreen(targetId) {
+            screens.forEach(s => s.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
+            currentScreen = targetId;
+
+            if (targetId === 'game-screen') initGame();
+            if (targetId === 'message-screen') startMessage();
+            if (targetId === 'menu-screen') resetGame();
+        }
+
+        /* ================= СЕРДЦЕ ИЗ ЛЕПЕСТКОВ ================= */
+        const heartCanvas = document.getElementById('heartCanvas');
+        const hCtx = heartCanvas.getContext('2d');
+        
+        function resizeHeart() {
+            heartCanvas.width = window.innerWidth;
+            heartCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeHeart);
+        resizeHeart();
+
+        class Petal {
+            constructor(targetX, targetY) {
+                this.x = Math.random() * heartCanvas.width;
+                this.y = heartCanvas.height + 50;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.vx = (Math.random() - 0.5) * 5;
+                this.vy = Math.random() * -5 - 2;
+                this.size = Math.random() * 8 + 4;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.color = `hsl(${330 + Math.random()*20}, 100%, ${60 + Math.random()*20}%)`;
+            }
+
+            update() {
+                let dx = this.targetX - this.x;
+                let dy = this.targetY - this.y;
+                this.vx += dx * 0.003;
+                this.vy += dy * 0.003;
+                
+                this.vx *= 0.95;
+                this.vy *= 0.95;
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += 0.05;
+            }
+
+            draw() {
+                hCtx.save();
+                hCtx.translate(this.x, this.y);
+                hCtx.rotate(this.rotation);
+                hCtx.fillStyle = this.color;
+                hCtx.shadowBlur = 10;
+                hCtx.shadowColor = this.color;
+                hCtx.beginPath();
+                hCtx.moveTo(0, 0);
+                hCtx.bezierCurveTo(this.size/2, -this.size, this.size, -this.size/2, this.size/2, this.size/2);
+                hCtx.bezierCurveTo(this.size/4, this.size/4, 0, this.size, 0, 0);
+                hCtx.fill();
+                hCtx.restore();
+            }
+        }
+
+        let petals = [];
+        let heartPoints = [];
+        const heartScale = 12;
+        const centerX = () => heartCanvas.width / 2;
+        const centerY = () => heartCanvas.height / 2 - 50;
+
+        function generateHeartPoints() {
+            heartPoints = [];
+            for (let t = 0; t < 2 * Math.PI; t += 0.08) {
+                let x = 16 * Math.pow(Math.sin(t), 3);
+                let y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                heartPoints.push({ x, y });
+            }
+        }
+        generateHeartPoints();
+
+        heartPoints.forEach(pt => {
+            petals.push(new Petal(centerX(), centerY()));
+        });
+
+        let time = 0;
+        function animateHeart() {
+            if (currentScreen !== 'menu-screen') return;
+            hCtx.clearRect(0, 0, heartCanvas.width, heartCanvas.height);
+            
+            time += 0.05;
+            const pulse = 1 + 0.05 * Math.sin(time * 2);
+
+            petals.forEach((p, i) => {
+                let pt = heartPoints[i % heartPoints.length];
+                p.targetX = centerX() + pt.x * heartScale * pulse;
+                p.targetY = centerY() + pt.y * heartScale * pulse;
+                p.update();
+                p.draw();
+            });
+        }
+
+        /* ================= ИГРА ДИНОЗАВРИК (СТИКЕРЫ) ================= */
+        const gameCanvas = document.getElementById('gameCanvas');
+        const gCtx = gameCanvas.getContext('2d');
+        let dog, trees, gameLoop, score, isGameOver, speed;
+        let spacePressed = false;
+        
+        // НОВАЯ ЛОГИКА СПАВНА - СЧЁТЧИК РАССТОЯНИЯ
+        let distanceSinceLastSpawn = 0;
+        const MIN_SPAWN_DISTANCE = 500; // Минимальный гарантированный интервал
+        const MAX_SPAWN_DISTANCE = 900; // Максимальный интервал (для разнообразия)
+        let nextSpawnDistance = MIN_SPAWN_DISTANCE; // Дистанция для следующего спавна
+
+        class Dog {
+            constructor() {
+                this.x = 50;
+                this.y = 250;
+                this.width = 50;
+                this.height = 50;
+                this.vy = 0;
+                this.gravity = 0.8;
+                this.jumpForce = -14;
+                this.ground = 250;
+                this.isJumping = false;
+                this.bounceFrame = 0;
+            }
+
+            jump() {
+                if (!this.isJumping) {
+                    this.vy = this.jumpForce;
+                    this.isJumping = true;
+                }
+            }
+
+            update() {
+                this.vy += this.gravity;
+                this.y += this.vy;
+                if (this.y >= this.ground) {
+                    this.y = this.ground;
+                    this.vy = 0;
+                    this.isJumping = false;
+                }
+                this.bounceFrame++;
+            }
+
+            draw() {
+                gCtx.save();
+                
+                // Тень
+                gCtx.fillStyle = 'rgba(5, 217, 232, 0.3)';
+                gCtx.beginPath();
+                gCtx.ellipse(this.x + 25, this.ground + 35, 30, 6, 0, 0, Math.PI * 2);
+                gCtx.fill();
+
+                let bounce = this.isJumping ? 0 : Math.sin(this.bounceFrame * 0.3) * 3;
+                
+                gCtx.shadowBlur = 15;
+                gCtx.shadowColor = colors.blue;
+                
+                const cx = this.x + 25;
+                const cy = this.y + bounce;
+                gCtx.translate(cx, cy);
+                gCtx.scale(-1, 1);
+                gCtx.font = '50px serif';
+                gCtx.textAlign = 'center';
+                gCtx.textBaseline = 'middle';
+                gCtx.fillText('🐕', 0, 0);
+                
+                gCtx.restore();
+            }
+        }
+
+        class SakuraTree {
+            constructor(x) {
+                this.x = x;
+                this.width = 40;
+                this.height = 60;
+                this.y = 250;
+                this.speed = speed;
+                this.waveFrame = Math.random() * 100;
+            }
+
+            update() {
+                this.x -= this.speed;
+                this.waveFrame += 0.1;
+            }
+
+            draw() {
+                gCtx.save();
+                
+                let wave = Math.sin(this.waveFrame) * 2;
+                
+                gCtx.font = '45px serif';
+                gCtx.textAlign = 'center';
+                gCtx.textBaseline = 'middle';
+                
+                gCtx.shadowBlur = 20;
+                gCtx.shadowColor = colors.pink;
+                
+                gCtx.fillText('🌸', this.x + 20 + wave, this.y - 5);
+                
+                gCtx.restore();
+            }
+        }
+
+        function initGame() {
+            dog = new Dog();
+            trees = [];
+            score = 0;
+            speed = 5;
+            isGameOver = false;
+            distanceSinceLastSpawn = 0;
+            nextSpawnDistance = MIN_SPAWN_DISTANCE; // Первая сакура появится через 500px
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('speed-display').innerText = "SPEED: 5.0";
+            
+            if (gameLoop) clearInterval(gameLoop);
+            
+            gameLoop = setInterval(() => {
+                if (isGameOver) return;
+
+                gCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+                gCtx.strokeStyle = colors.blue;
+                gCtx.shadowBlur = 10;
+                gCtx.shadowColor = colors.blue;
+                gCtx.beginPath();
+                gCtx.moveTo(0, 285);
+                gCtx.lineTo(gameCanvas.width, 285);
+                gCtx.stroke();
+                gCtx.shadowBlur = 0;
+
+                dog.update();
+                dog.draw();
+
+                // НОВАЯ ЛОГИКА СПАВНА
+                // Прибавляем пройденное расстояние (равно скорости)
+                distanceSinceLastSpawn += speed;
+                
+                // Если пройденное расстояние >= необходимого И случайный шанс срабатывает
+                if (distanceSinceLastSpawn >= nextSpawnDistance) {
+                    // Создаём сакуру
+                    trees.push(new SakuraTree(gameCanvas.width));
+                    
+                    // Сбрасываем счётчик
+                    distanceSinceLastSpawn = 0;
+                    
+                    // Генерируем новую дистанцию для следующего спавна (от 500 до 900 пикселей)
+                    // Это гарантирует минимум 500px между препятствиями
+                    nextSpawnDistance = MIN_SPAWN_DISTANCE + Math.random() * (MAX_SPAWN_DISTANCE - MIN_SPAWN_DISTANCE);
+                }
+
+                for (let i = 0; i < trees.length; i++) {
+                    let t = trees[i];
+                    t.speed = speed;
+                    t.update();
+                    t.draw();
+
+                    // Коллизия
+                    if (dog.x + 35 > t.x + 5 && dog.x + 15 < t.x + 35 && 
+                        dog.y > t.y - 30) {
+                        gameOver();
+                    }
+
+                    if (t.x < -50) {
+                        trees.splice(i, 1);
+                        score++;
+                        i--;
+                    }
+                }
+
+                score += 0.1;
+                document.getElementById('score').innerText = "SCORE: " + Math.floor(score);
+                
+                // Ускорение каждые 50 очков (с 5 до 12)
+                const newSpeed = 5 + Math.floor(score / 50) * 0.5;
+                if (newSpeed !== speed && newSpeed <= 12) {
+                    speed = newSpeed;
+                    document.getElementById('speed-display').innerText = "SPEED: " + speed.toFixed(1);
+                }
+
+            }, 1000 / 60);
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            clearInterval(gameLoop);
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        function restartGame() {
+            initGame();
+        }
+
+        function resetGame() {
+            clearInterval(gameLoop);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && currentScreen === 'game-screen') {
+                e.preventDefault();
+                if (!spacePressed) dog.jump();
+                spacePressed = true;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') spacePressed = false;
+        });
+        
+        gameCanvas.addEventListener('mousedown', () => {
+            if (currentScreen === 'game-screen') dog.jump();
+        });
+        gameCanvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (currentScreen === 'game-screen') dog.jump();
+        });
+
+        /* ================= МИЛОЕ СООБЩЕНИЕ ================= */
+        const messages = [
+            "Привет, моя самая дорогая... 💕",
+            "Каждый день с тобой — это маленькое чудо.",
+            "Ты делаешь мой мир ярче, теплее и счастливее.",
+            "Твоя улыбка — это то, ради чего хочется просыпаться по утрам.",
+            "Ты такая красивая, умная, добрая и нежная...",
+            "Я люблю то, как ты смеешься.",
+            "Я люблю то, как ты смотришь на меня.",
+            "Я люблю каждую минуту, проведенную с тобой.",
+            "Ты — мой самый лучший человек на всей планете.",
+            "Спасибо, что ты есть в моей жизни.",
+            "Я так сильно тебя люблю, что иногда не хватает слов.",
+            "Ты — мое счастье, моя радость, моя любовь.",
+            "永远に愛してる (Я буду любить тебя вечно) 💖"
+        ];
+
+        let messageLineIndex = 0;
+        let messageTimeout;
+        const msgBody = document.getElementById('message-body');
+
+        function startMessage() {
+            msgBody.innerHTML = '';
+            messageLineIndex = 0;
+            clearTimeout(messageTimeout);
+            showMessageLine();
+        }
+
+        function showMessageLine() {
+            if (currentScreen !== 'message-screen') return;
+            if (messageLineIndex >= messages.length) return;
+
+            const line = messages[messageLineIndex];
+            const lineDiv = document.createElement('div');
+            lineDiv.className = 'message-line';
+            lineDiv.style.animationDelay = '0s';
+            
+            if (messageLineIndex === messages.length - 1) {
+                lineDiv.innerHTML = line.replace('💖', '<span class="heart-emoji">💖</span>');
+            } else {
+                lineDiv.textContent = line;
+            }
+            
+            msgBody.appendChild(lineDiv);
+            
+            messageLineIndex++;
+            messageTimeout = setTimeout(showMessageLine, 1500);
+        }
+
+        /* ================= ГЛАВНЫЙ ЦИКЛ АНИМАЦИИ ================= */
+        function mainLoop() {
+            drawMatrix();
+            if (currentScreen === 'menu-screen') {
+                animateHeart();
+            }
+            requestAnimationFrame(mainLoop);
+        }
+        
+        mainLoop();
+
+    </script>
+</body>
+</html>
